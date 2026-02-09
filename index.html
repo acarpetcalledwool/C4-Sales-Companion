@@ -3,515 +3,356 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Sales Flow</title>
+    <title>Neon Sales Engine: Infinite Flow</title>
     <style>
         :root {
-            --bg: #0f172a; /* Deep Midnight */
-            --card-bg: rgba(30, 41, 59, 0.7);
-            
-            /* Neon Colors */
-            --neon-blue: #00f2ff;
-            --neon-pink: #ff00ff;
-            --neon-green: #00ff9d;
-            --neon-purple: #bd00ff;
-            
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
+            --bg: #09090b;
+            --card-bg: #18181b;
+            --neon-blue: #06b6d4;
+            --neon-pink: #ec4899;
+            --neon-green: #22c55e;
+            --neon-red: #ef4444;
+            --neon-purple: #8b5cf6;
+            --text-main: #f4f4f5;
+            --glass: rgba(255, 255, 255, 0.05);
         }
 
-        body { 
-            margin: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text-main);
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
+        body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
 
-        /* --- KEYFRAMES FOR WOBBLE --- */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
-            100% { transform: translateY(0px); }
-        }
-        
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 5px var(--neon-green); }
-            50% { box-shadow: 0 0 20px var(--neon-green), 0 0 10px #fff; }
-            100% { box-shadow: 0 0 5px var(--neon-green); }
-        }
+        /* --- ANIMATIONS --- */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        @keyframes shockwave { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- TOP BAR (MOMENTUM METER) --- */
-        .meter-container {
-            padding: 20px;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            z-index: 10;
-        }
-        
-        .meter-label {
-            display: flex; justify-content: space-between; font-size: 0.8rem; 
-            text-transform: uppercase; letter-spacing: 2px; color: var(--neon-blue); margin-bottom: 5px;
-        }
+        /* --- TOP HUD --- */
+        .hud { padding: 15px 20px; background: rgba(0,0,0,0.8); border-bottom: 1px solid #333; z-index: 20; display: flex; justify-content: space-between; align-items: center; }
+        .score-box { font-size: 1.2rem; font-weight: 800; color: var(--neon-green); text-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+        .level-badge { font-size: 0.7rem; background: var(--neon-purple); padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; box-shadow: 0 0 10px var(--neon-purple); }
 
-        .progress-track {
-            height: 16px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; position: relative;
-        }
-        
-        .progress-fill {
-            height: 100%; width: 0%; 
-            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
-            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 0 15px var(--neon-blue);
-        }
-
-        /* --- SCROLLABLE CONTENT AREA --- */
-        .app-view { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px; 
-            display: none; 
-            /* Hide scrollbar */
-            scrollbar-width: none; 
-            -ms-overflow-style: none;
-        }
-        .app-view::-webkit-scrollbar { display: none; }
+        /* --- APP VIEW CONTAINERS --- */
+        .app-view { flex: 1; overflow-y: auto; padding: 20px; display: none; scrollbar-width: none; }
         .app-view.active { display: block; }
 
-        /* --- THE YES BANK (NEON CARDS) --- */
-        .section-title {
-            color: var(--neon-pink);
-            font-size: 1.2rem;
-            margin: 20px 0 10px 0;
-            text-shadow: 0 0 5px var(--neon-pink);
-            font-weight: 800;
-            text-transform: uppercase;
+        /* --- YES DECK STYLES --- */
+        .deck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding-bottom: 100px; }
+        .yes-card { 
+            background: var(--card-bg); border: 1px solid #333; padding: 20px; border-radius: 16px; 
+            position: relative; cursor: pointer; transition: 0.2s; animation: slideIn 0.4s ease-out;
+            display: flex; flex-direction: column; justify-content: center; min-height: 80px;
         }
-
-        .card-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding-bottom: 40px;
-        }
-
-        .neon-card {
-            background: var(--card-bg);
-            border: 2px solid rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 15px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            
-            /* The Wobbly Shape Look */
-            border-radius: 20px;
-            animation: float 5s ease-in-out infinite;
-        }
-
-        /* Randomize animation timing slightly via JS later, or use nth-child here */
-        .neon-card:nth-child(odd) { animation-duration: 6s; }
-        .neon-card:nth-child(even) { animation-duration: 7s; }
-
-        .neon-card h3 { margin: 0; font-size: 0.9rem; color: #fff; pointer-events: none; }
-        .neon-card p { margin: 5px 0 0 0; font-size: 0.75rem; color: #94a3b8; pointer-events: none; }
-
-        /* ACTIVE STATE (CLICKED) */
-        .neon-card.active {
-            border-color: var(--neon-green);
-            background: rgba(0, 255, 157, 0.1);
-            box-shadow: 0 0 15px var(--neon-green);
-            transform: scale(1.05);
-            animation: none; /* Stop floating when selected so it feels locked in */
-        }
-        .neon-card.active::after {
-            content: 'YES'; position: absolute; right: 10px; top: 10px;
-            font-weight: 900; color: var(--neon-green); font-size: 0.8rem;
-        }
-
-        /* --- CHAT BUBBLES (WOBBLY) --- */
-        .chat-container { display: flex; flex-direction: column; gap: 20px; padding-bottom: 120px; }
+        .yes-card h3 { margin: 0 0 5px 0; font-size: 0.9rem; color: var(--neon-blue); }
+        .yes-card p { margin: 0; font-size: 0.8rem; color: #a1a1aa; line-height: 1.4; }
         
-        .bubble {
-            max-width: 85%; padding: 15px 20px; color: white; position: relative;
-            line-height: 1.5; font-size: 1rem;
-            animation: float 6s ease-in-out infinite;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            opacity: 0;
-            transform: translateY(20px);
-            animation: popUp 0.4s forwards, float 6s ease-in-out infinite 0.4s;
-        }
+        /* Level Colors */
+        .yes-card.lvl-1 { border-left: 4px solid var(--neon-blue); }
+        .yes-card.lvl-2 { border-left: 4px solid var(--neon-purple); }
+        .yes-card.lvl-3 { border-left: 4px solid var(--neon-pink); }
 
-        @keyframes popUp { to { opacity: 1; transform: translateY(0); } }
+        /* Active Effect */
+        .yes-card.clicked { animation: shockwave 0.6s ease-out; background: #064e3b; border-color: var(--neon-green); transform: scale(0.95); opacity: 0; pointer-events: none; }
 
-        /* Rep Bubble (Right, Blue Neon) */
-        .bubble.rep {
-            align-self: flex-end;
-            background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(0, 100, 255, 0.2));
-            border: 2px solid var(--neon-blue);
-            border-radius: 20px 20px 4px 20px; /* Sharp corner bottom right */
-            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
-        }
+        /* --- CHAT STYLES --- */
+        .chat-container { display: flex; flex-direction: column; gap: 15px; padding-bottom: 140px; }
+        .bubble { max-width: 85%; padding: 16px; border-radius: 20px; font-size: 1rem; line-height: 1.5; position: relative; animation: slideIn 0.3s ease-out; }
+        
+        .bubble.rep { align-self: flex-end; background: #1e3a8a; border: 1px solid var(--neon-blue); color: white; border-bottom-right-radius: 4px; box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+        .bubble.customer { align-self: flex-start; background: #3f3f46; border: 1px solid #52525b; color: white; border-bottom-left-radius: 4px; }
+        .bubble.manager { align-self: center; background: #450a0a; border: 1px solid var(--neon-red); color: #fca5a5; text-align: center; width: 90%; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); animation: float 3s infinite ease-in-out; }
 
-        /* Customer Bubble (Left, Pink Neon) */
-        .bubble.customer {
-            align-self: flex-start;
-            background: linear-gradient(135deg, rgba(255, 0, 255, 0.2), rgba(189, 0, 255, 0.2));
-            border: 2px solid var(--neon-pink);
-            border-radius: 20px 20px 20px 4px; /* Sharp corner bottom left */
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
-        }
-
-        /* Instruction Bubble (Center, Yellow) */
-        .bubble.instruction {
-            align-self: center;
-            text-align: center;
-            background: rgba(255, 200, 0, 0.1);
-            border: 1px dashed #ffd700;
-            color: #ffd700;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            padding: 10px 30px;
-        }
-
-        /* --- CONTROLS (Floating at Bottom) --- */
-        .controls-area {
-            position: fixed; bottom: 85px; left: 0; width: 100%;
-            padding: 10px; box-sizing: border-box;
-            display: flex; gap: 10px; overflow-x: auto;
-            /* Hide scrollbar */
-            scrollbar-width: none; -ms-overflow-style: none;
-        }
-        .controls-area::-webkit-scrollbar { display: none; }
-
-        .neon-btn {
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border: 1px solid var(--neon-blue);
-            padding: 12px 20px;
-            border-radius: 50px;
-            white-space: nowrap;
-            cursor: pointer;
-            font-weight: 600;
-            box-shadow: 0 0 5px var(--neon-blue);
-            transition: 0.2s;
-            flex-shrink: 0;
-        }
-        .neon-btn:active {
-            background: var(--neon-blue);
-            color: #000;
-            box-shadow: 0 0 20px var(--neon-blue);
-        }
+        /* --- CONTROLS --- */
+        .controls-deck { position: fixed; bottom: 80px; left: 0; width: 100%; padding: 10px; box-sizing: border-box; display: flex; gap: 10px; overflow-x: auto; background: linear-gradient(to top, var(--bg) 80%, transparent); scrollbar-width: none; }
+        
+        .btn { padding: 12px 24px; border-radius: 50px; border: none; font-weight: 700; white-space: nowrap; cursor: pointer; flex-shrink: 0; transition: 0.2s; font-size: 0.9rem; }
+        .btn-neon { background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); box-shadow: 0 0 5px var(--neon-blue); }
+        .btn-neon:active { background: var(--neon-blue); color: black; transform: scale(0.95); }
+        
+        .btn-manager { background: #450a0a; border: 1px solid var(--neon-red); color: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+        .btn-manager:active { background: var(--neon-red); color: white; }
 
         /* --- NAV BAR --- */
-        .nav {
-            position: fixed; bottom: 0; width: 100%; height: 70px;
-            background: rgba(15, 23, 42, 0.95);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-around; align-items: center;
-            backdrop-filter: blur(5px);
-            z-index: 100;
-        }
-        .nav-btn {
-            background: none; border: none; color: #64748b;
-            font-size: 1.5rem; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-        }
-        .nav-btn span { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; }
-        .nav-btn.active { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+        .nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: rgba(9, 9, 11, 0.95); border-top: 1px solid #333; display: flex; justify-content: space-around; align-items: center; z-index: 100; backdrop-filter: blur(10px); }
+        .nav-item { background: none; border: none; color: #71717a; font-size: 1.5rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; gap: 4px; }
+        .nav-item span { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .nav-item.active { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
 
     </style>
 </head>
 <body>
 
-    <div class="meter-container">
-        <div class="meter-label">
-            <span>Yes Momentum</span>
-            <span id="score-display">0 / 10</span>
-        </div>
-        <div class="progress-track">
-            <div class="progress-fill" id="progress-bar"></div>
-        </div>
+    <div class="hud">
+        <div class="level-badge" id="level-indicator">Level 1: Rapport</div>
+        <div class="score-box" id="score-display">YES: 0</div>
     </div>
 
     <div id="view-yes" class="app-view active">
-        
-        <div class="section-title">The Core 5 (Must Haves)</div>
-        <div class="card-grid" id="core-grid">
+        <div class="deck-grid" id="card-container">
             </div>
-
-        <div class="section-title">Vibe Check (Pick Any 5)</div>
-        <div class="card-grid" id="vibe-grid">
-            </div>
+        <div style="text-align: center; color: #555; font-size: 0.8rem; margin-top: 20px;">Tap to Bank • Harder cards appear automatically</div>
     </div>
 
     <div id="view-chat" class="app-view">
-        <div class="chat-container" id="chat-history">
-            <div class="bubble instruction">Tap an objection below to start the neon flow.</div>
+        <div class="chat-container" id="chat-box">
+            <div class="bubble manager">System: Tap an objection to start. If stuck, hit SOS.</div>
         </div>
-        <div class="controls-area" id="chat-controls">
-            </div>
+        <div class="controls-deck" id="chat-controls"></div>
     </div>
 
     <nav class="nav">
-        <button class="nav-btn active" onclick="switchTab('yes', this)">
-            <div>⚡️</div>
-            <span>Yes Bank</span>
+        <button class="nav-item active" onclick="switchView('yes', this)">
+            <div>⚡️</div><span>Yes Deck</span>
         </button>
-        <button class="nav-btn" onclick="switchTab('chat', this)">
-            <div>💬</div>
-            <span>Chat Flow</span>
+        <button class="nav-item" onclick="switchView('chat', this)">
+            <div>🛡️</div><span>Objections</span>
         </button>
-        <button class="nav-btn" onclick="resetAll()">
-            <div>🔄</div>
-            <span>Reset</span>
+        <button class="nav-item" onclick="location.reload()">
+            <div>🔄</div><span>Reset</span>
         </button>
     </nav>
 
 <script>
     /* =========================================
-       DATA: THE YES BANK
+       DATA: 50 YES QUESTIONS (TIERED)
        ========================================= */
-    // The "Must Haves" - Business critical
-    const coreYesData = [
-        { title: "The Solution", text: "Do you agree this solves the glare issue?" },
-        { title: "The Budget", text: "Is the price within a comfortable range?" },
-        { title: "The Trust", text: "Do you feel confident in our 50-year history?" },
-        { title: "The Product", text: "Can you picture this in your home?" },
-        { title: "The Ease", text: "Does our installation process sound easy?" }
+    // Tier 1: Easy / Rapport / Low Risk (0-15)
+    const tier1 = [
+        "Is this the right address?", "Nice weather today?", "Have we met before?", "Is this the living room?",
+        "Do you like this color?", "Is light control important?", "Do you hate glare?", "Is privacy a concern?",
+        "Do you have pets?", "Is safety important?", "Do you like modern styles?", "Is this your forever home?",
+        "Do you like the neighbors?", "Is the kitchen busy?", "Do you like open concepts?", "Is the sun hot here?"
+    ];
+    // Tier 2: Product / Logic / Medium Risk (16-35)
+    const tier2 = [
+        "Does this fabric feel durable?", "Can you see the quality difference?", "Do you trust our 50-year history?",
+        "Is the warranty clear?", "Does the mechanism feel smooth?", "Does this match the sofa?",
+        "Is easy cleaning a priority?", "Would motorization help?", "Does this solve the heat issue?",
+        "Do you agree with the layout?", "Is the timeline acceptable?", "Does the install process sound easy?",
+        "Do you like our 'White Glove' promise?", "Is the energy saving important?", "Does this look better than the old ones?",
+        "Are we on the right track?", "Is this the style you imagined?", "Does this fit the decor?"
+    ];
+    // Tier 3: Closing / Money / High Risk (36-50)
+    const tier3 = [
+        "Is the price within range?", "Does the monthly payment work?", "Are you ready to order?",
+        "Can we book the install?", "Does Tuesday work?", "Is the spouse on board?",
+        "Do you want to beat the rush?", "Shall we get the paperwork?", "Is this the best solution?",
+        "Are you happy to proceed?", "Can I earn your business?", "Do you want to lock in this price?",
+        "Is the deposit doable today?", "Ready to sign?", "Shall we do this?"
     ];
 
-    // The "Fun/Chill" ones - Rep picks based on personality
-    const vibeYesData = [
-        { title: "Style Match", text: "Does this fabric feel like 'you'?" },
-        { title: "Pet Approved", text: "Think the cat will approve?" },
-        { title: "Neighbor Envy", text: "Ready to make the neighbors jealous?" },
-        { title: "Safety First", text: "Is cordless safety important to you?" },
-        { title: "Tech Savvy", text: "Would the app control be fun to use?" },
-        { title: "Cleaning", text: "Happy with how easy this is to wipe down?" },
-        { title: "Temperature", text: "Want to keep the heat out in summer?" },
-        { title: "Privacy", text: "Is blocking the street view a priority?" },
-        { title: "My Service", text: "Have I answered all your questions?" },
-        { title: "Timeline", text: "Are you excited to get this done soon?" }
-    ];
+    let yesPool = [...tier1, ...tier2, ...tier3]; // The full deck
+    let currentScore = 0;
 
     /* =========================================
-       DATA: CHAT FLOW
+       LOGIC: YES GAME ENGINE
+       ========================================= */
+    function initDeck() {
+        const container = document.getElementById('card-container');
+        container.innerHTML = '';
+        // Deal initial hand of 6 cards (mostly Tier 1)
+        for(let i=0; i<6; i++) {
+            dealCard();
+        }
+    }
+
+    function dealCard() {
+        if(yesPool.length === 0) return; // Empty deck
+
+        // Progression Logic: Pick from start of array (Tier 1) then move deeper
+        // As user clicks, we shift/pop from the pool.
+        // For random variety within tiers, we could shuffle, but linear is good for "getting harder"
+        
+        // Pick a card based on current score (Simulated difficulty ramp)
+        let cardIndex = 0; 
+        if(currentScore > 10) cardIndex = Math.floor(Math.random() * 5); // Pick from next 5 available
+        
+        const text = yesPool.splice(cardIndex, 1)[0];
+        if(!text) return;
+
+        // Determine Level for Styling
+        let level = 'lvl-1';
+        if(tier2.includes(text)) level = 'lvl-2';
+        if(tier3.includes(text)) level = 'lvl-3';
+
+        const card = document.createElement('div');
+        card.className = `yes-card ${level}`;
+        card.innerHTML = `<h3>YES QUESTION</h3><p>"${text}"</p>`;
+        
+        card.onclick = () => {
+            // Success Logic
+            triggerHaptic();
+            card.classList.add('clicked');
+            currentScore++;
+            updateHud();
+            
+            // Remove old card and deal new one after animation
+            setTimeout(() => {
+                card.remove();
+                dealCard(); 
+            }, 500);
+        };
+
+        document.getElementById('card-container').appendChild(card);
+    }
+
+    function updateHud() {
+        document.getElementById('score-display').innerText = `YES: ${currentScore}`;
+        const badge = document.getElementById('level-indicator');
+        
+        if(currentScore < 10) badge.innerText = "Level 1: Rapport";
+        else if(currentScore < 25) { 
+            badge.innerText = "Level 2: Product Fit"; 
+            badge.style.background = "var(--neon-blue)";
+        } else { 
+            badge.innerText = "Level 3: The Close"; 
+            badge.style.background = "var(--neon-pink)";
+        }
+    }
+
+    function triggerHaptic() {
+        if (navigator.vibrate) navigator.vibrate(50); // Short pulse
+    }
+
+    /* =========================================
+       LOGIC: INFINITE CHAT ENGINE
        ========================================= */
     const chatData = {
         root: {
-            msg: "What's the customer saying?",
-            type: 'instruction',
+            msg: "What is the current roadblock?",
+            type: "manager",
             options: [
-                { label: "Too Expensive", target: 'price' },
-                { label: "Hate the Color", target: 'style' },
-                { label: "Need to Think", target: 'stall' },
-                { label: "Check w/ Partner", target: 'spouse' }
+                { label: "Price / Cost", target: "price" },
+                { label: "Spouse / Partner", target: "spouse" },
+                { label: "Need to Think", target: "stall" },
+                { label: "Competitor", target: "comp" }
             ]
         },
-        // --- PRICE ---
+        // --- PRICE LOOP ---
         price: {
-            msg: "They said it's too much money.",
-            type: 'customer',
-            next: {
-                msg: "I hear you. It is a premium investment. Is it the total price tag, or just the monthly cash flow?",
-                type: 'rep',
-                options: [
-                    { label: "Total Price", target: 'price_value' },
-                    { label: "Monthly Payment", target: 'price_finance' }
-                ]
-            }
-        },
-        price_value: {
-            msg: "It's the total cost.",
-            type: 'customer',
-            next: {
-                msg: "Totally fair. But remember the 50-year warranty? You can buy this once, or buy a cheaper version twice. Which is actually more expensive?",
-                type: 'rep',
-                options: [
-                    { label: "Good Point", target: 'close' },
-                    { label: "Still No", target: 'root' }
-                ]
-            }
-        },
-        // --- STYLE ---
-        style: {
-            msg: "I don't like this color.",
-            type: 'customer',
-            next: {
-                msg: "No problem! That's why we measure. What is your dream style? Modern, or more Traditional?",
-                type: 'rep',
-                options: [
-                    { label: "Modern", target: 'style_fix' },
-                    { label: "Traditional", target: 'style_fix' }
-                ]
-            }
-        },
-        style_fix: {
-            msg: "Let me grab the 'Designer Collection'. This one reflects the light beautifully. Better?",
-            type: 'rep',
+            msg: "Is it the Total Price or the Monthly Payment?",
+            type: "rep",
             options: [
-                { label: "Yes, Love it", target: 'close' },
-                { label: "Still ugly", target: 'root' }
+                { label: "Total Price", target: "price_val" },
+                { label: "Monthly Payment", target: "price_fin" }
             ]
         },
-        // --- CLOSE ---
-        close: {
-            msg: "That sounds great.",
-            type: 'customer',
-            next: {
-                msg: "Awesome. Since we solved that, let's lock in the install date so you don't have to wait. Does Tuesday work?",
-                type: 'rep',
-                options: [
-                    { label: "Deal Closed! 🎉", target: 'root' }
-                ]
-            }
+        price_val: {
+            msg: "Rep: \"I hear you. But consider our 50-year history. Buying quality once is cheaper than buying junk twice.\"",
+            type: "rep",
+            next: "check_pulse"
+        },
+        price_fin: {
+            msg: "Rep: \"If I can get the monthly payment under $X, would that solve it?\"",
+            type: "rep",
+            next: "check_pulse"
+        },
+        // --- STALL LOOP ---
+        stall: {
+            msg: "Rep: \"Usually when people need to think, it's either the Price or the Style. Which is it for you?\"",
+            type: "rep",
+            options: [
+                { label: "It's Price", target: "price" }, // LOOP BACK!
+                { label: "It's Style", target: "style" }
+            ]
+        },
+        style: {
+            msg: "Rep: \"Let's ignore the price for a second. If this was free, would you want it in your window?\"",
+            type: "rep",
+            next: "check_pulse"
+        },
+        // --- SPOUSE LOOP ---
+        spouse: {
+            msg: "Rep: \"Totally fair. When you ask them, will they be more worried about the Cost or the Look?\"",
+            type: "rep",
+            options: [
+                { label: "The Cost", target: "price" }, // LOOP BACK!
+                { label: "The Look", target: "style" }
+            ]
+        },
+        // --- THE CHECK PULSE (The Infinite Loop Connector) ---
+        check_pulse: {
+            msg: "Did that resolve the objection?",
+            type: "manager",
+            options: [
+                { label: "Yes, They Bought! 🎉", target: "win" },
+                { label: "No, New Objection", target: "root" } // INFINITE LOOP
+            ]
+        },
+        win: {
+            msg: "Congratulations! Resetting board...",
+            type: "manager",
+            action: () => setTimeout(() => location.reload(), 2000)
+        },
+        // --- MANAGER SOS (Calm Down) ---
+        sos: {
+            msg: "🚨 MANAGER MODE 🚨\n\n1. Take a deep breath.\n2. Say: \"You know what, I want to make sure I'm doing the best for you. Do you mind if I call my manager to check on a generic promotion?\"\n3. Step outside for 60 seconds.",
+            type: "manager",
+            options: [
+                { label: "I'm Calm. Resume.", target: "root" }
+            ]
         }
     };
 
-    /* =========================================
-       LOGIC: YES BANK
-       ========================================= */
-    let yesCount = 0;
-    const GOAL = 10;
-
-    function renderYesBank() {
-        const coreGrid = document.getElementById('core-grid');
-        const vibeGrid = document.getElementById('vibe-grid');
-
-        // Render Core
-        coreYesData.forEach(item => {
-            coreGrid.appendChild(createCard(item));
-        });
-
-        // Render Vibe
-        vibeYesData.forEach(item => {
-            vibeGrid.appendChild(createCard(item));
-        });
-    }
-
-    function createCard(item) {
-        const card = document.createElement('div');
-        card.className = 'neon-card';
-        card.innerHTML = `<h3>${item.title}</h3><p>${item.text}</p>`;
-        
-        card.onclick = () => {
-            // Toggle Logic
-            if(card.classList.contains('active')) {
-                card.classList.remove('active');
-                yesCount--;
-            } else {
-                card.classList.add('active');
-                yesCount++;
-                triggerPulse(card); // Fun effect
-            }
-            updateMeter();
-        };
-        return card;
-    }
-
-    function updateMeter() {
-        // Clamp count to goal for visual bar
-        const percent = Math.min((yesCount / GOAL) * 100, 100);
-        document.getElementById('progress-bar').style.width = percent + '%';
-        document.getElementById('score-display').innerText = `${yesCount} / ${GOAL}`;
-        
-        // Color change if goal met
-        if (yesCount >= GOAL) {
-            document.getElementById('progress-bar').style.background = '#00ff9d'; // Green
-            document.getElementById('progress-bar').style.boxShadow = '0 0 20px #00ff9d';
-        }
-    }
-
-    function triggerPulse(element) {
-        // Simple visual feedback
-        element.style.animation = 'pulse-glow 0.5s ease-in-out';
-        setTimeout(() => { element.style.animation = ''; }, 500);
-    }
-
-    /* =========================================
-       LOGIC: CHAT
-       ========================================= */
-    function renderChatStep(key) {
-        const data = chatData[key] || chatData['root'];
-        const history = document.getElementById('chat-history');
+    function renderChat(key) {
+        const box = document.getElementById('chat-box');
         const controls = document.getElementById('chat-controls');
+        const data = chatData[key];
 
-        // Clear controls immediately
+        // 1. Render Bubble
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${data.type}`;
+        bubble.innerText = data.msg;
+        box.appendChild(bubble);
+        box.scrollTop = box.scrollHeight;
+
+        // 2. Clear & Render Controls
         controls.innerHTML = '';
-
-        // 1. Render Main Message
-        if (data.msg) {
-            const bubble = document.createElement('div');
-            bubble.className = `bubble ${data.type}`;
-            bubble.innerText = data.msg;
-            history.appendChild(bubble);
-            scrollToBottom();
+        
+        // Always add SOS Button unless we are IN the SOS menu
+        if(key !== 'sos' && key !== 'win') {
+            const sosBtn = document.createElement('button');
+            sosBtn.className = 'btn btn-manager';
+            sosBtn.innerText = "🚨 SOS";
+            sosBtn.onclick = () => renderChat('sos');
+            controls.appendChild(sosBtn);
         }
 
-        // 2. Handle Auto-Next (Simulated typing delay)
-        if (data.next) {
-            setTimeout(() => {
-                const nextBubble = document.createElement('div');
-                nextBubble.className = `bubble ${data.next.type}`;
-                nextBubble.innerText = data.next.msg;
-                history.appendChild(nextBubble);
-                scrollToBottom();
-                renderButtons(data.next.options);
-            }, 600);
-        } else {
-            // Render buttons immediately
-            renderButtons(data.options);
+        if(data.options) {
+            data.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-neon';
+                btn.innerText = opt.label;
+                btn.onclick = () => {
+                    // Visual feedback of user choice
+                    const userReply = document.createElement('div');
+                    userReply.className = 'bubble customer';
+                    userReply.innerText = opt.label;
+                    box.appendChild(userReply);
+                    
+                    renderChat(opt.target);
+                };
+                controls.appendChild(btn);
+            });
+        } else if (data.next) {
+            // Auto-advance for statement bubbles
+            setTimeout(() => renderChat(data.next), 1500);
+        } else if (data.action) {
+            data.action();
         }
-    }
-
-    function renderButtons(options) {
-        const controls = document.getElementById('chat-controls');
-        if (!options) return;
-
-        options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'neon-btn';
-            btn.innerText = opt.label;
-            btn.onclick = () => renderChatStep(opt.target);
-            controls.appendChild(btn);
-        });
-    }
-
-    function scrollToBottom() {
-        const view = document.getElementById('view-chat');
-        view.scrollTo({ top: view.scrollHeight, behavior: 'smooth' });
     }
 
     /* =========================================
-       LOGIC: SYSTEM
+       SYSTEM
        ========================================= */
-    function switchTab(viewId, btn) {
-        // Switch View
-        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+    function switchView(viewId, btn) {
+        document.querySelectorAll('.app-view').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.getElementById('view-' + viewId).classList.add('active');
-
-        // Switch Nav
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     }
 
-    function resetAll() {
-        // Reset Yes Bank
-        yesCount = 0;
-        updateMeter();
-        document.querySelectorAll('.neon-card').forEach(c => c.classList.remove('active'));
-        
-        // Reset Chat
-        document.getElementById('chat-history').innerHTML = '<div class="bubble instruction">Tap an objection below to start the neon flow.</div>';
-        renderChatStep('root');
-    }
-
-    // INIT
-    renderYesBank();
-    renderChatStep('root');
+    // Start
+    initDeck();
+    renderChat('root');
 
 </script>
-
 </body>
 </html>
